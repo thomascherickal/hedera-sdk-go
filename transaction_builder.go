@@ -66,6 +66,43 @@ func (builder TransactionBuilder) Execute(client *Client) (TransactionID, error)
 	return tx.Execute(client)
 }
 
+func (builder TransactionBuilder) Cost(client *Client) (Hbar, error) {
+	// An operator must be set on the client
+	if client == nil || client.operator == nil {
+		return ZeroHbar, newErrLocalValidationf("calling .Cost() requires client.SetOperator")
+	}
+
+	costBuilder := builder
+
+	costTx, err := costBuilder.
+		SetMaxTransactionFee(0).
+		SetTransactionID(NewTransactionID(client.operator.accountID)).
+		Build(client)
+
+	if err != nil {
+		return ZeroHbar, err
+	}
+
+	_, resp, err := costTx.
+		executeForResponse(client)
+
+	if err != nil {
+		return ZeroHbar, err
+	}
+
+	status := Status(resp.NodeTransactionPrecheckCode)
+
+	if status != StatusInsufficientTxFee {
+		//  any status that is not insufficienttxfee should be considered an error
+		return ZeroHbar, newErrHederaPreCheckStatus(transactionIDFromProto(builder.pb.TransactionID), status)
+	}
+
+
+
+	resp.
+
+}
+
 //
 // Shared
 //
